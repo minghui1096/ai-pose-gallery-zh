@@ -373,8 +373,8 @@ export function toPublicHttpsUrl(src: string): string {
   return `https://ai-pose-gallery.pages.dev/${clean}`
 }
 
-async function srcToPngDataUrl(src: string): Promise<string> {
-  if (src.startsWith('data:image/')) return src
+async function srcToPngDataUrl(src: string, normalize = false): Promise<string> {
+  if (!normalize && src.startsWith('data:image/')) return src
   const img = await loadImage(src)
   const maxSide = 1024
   const scale = Math.min(1, maxSide / Math.max(img.width, img.height))
@@ -1579,14 +1579,16 @@ export async function generateCharacterImage(params: {
   // 1) 用户显式选择了 base64 模式
   // 2) 或者勾选了「附带三合一 Canvas 合成图」（本地动态绘制无公网 URL）
   // 3) 或者使用 Gemini Native 原生接口 / OpenAI multipart/form-data 模式
+  // 4) Qwen 始终发送实际读取的 PNG，避免本地图源映射的公网 URL 无法被上游读取
   const needBase64 =
+    provider === 'qwen' ||
     config.imagePassMode === 'base64' ||
     config.sendStitchedSheet ||
     (provider === 'gemini' && config.geminiParams.endpointMode === 'native') ||
     (provider === 'gpt' && config.gptParams.endpointMode === 'images_edits')
 
   const imageRefs: string[] = needBase64
-    ? await Promise.all(rawSources.map(srcToPngDataUrl))
+    ? await Promise.all(rawSources.map((src) => srcToPngDataUrl(src, provider === 'qwen')))
     : rawSources.map(toPublicHttpsUrl)
 
   const allImageRefs: string[] = config.sendStitchedSheet
@@ -1787,7 +1789,7 @@ export async function generateCharacterImage(params: {
 
     // Qwen-Image 原生支持直接传入公网 HTTPS URL 或 Base64 Data URL: {"image": "https://..."}
     const content = [
-      ...imageRefs.map((ref) => ({ image: ref })),
+      ...allImageRefs.map((ref) => ({ image: ref })),
       { text: prompt },
     ]
 
@@ -1860,6 +1862,11 @@ export async function generateCharacterImage(params: {
   }
 
   if (!res.ok) {
+    if (provider === 'qwen' && (res.status === 401 || json?.code === 'InvalidApiKey')) {
+      throw new Error(
+        `[Qwen] API Key 鉴权失败（${new URL(baseUrl).hostname}）。请确认使用阿里云百炼 API Key（不是 AccessKey ID / Secret），仅填写 Key 本身，不要附加 Bearer，并确认 Base URL 与创建 Key 的地域一致：北京 dashscope.aliyuncs.com、新加坡 dashscope-intl.aliyuncs.com、美国 dashscope-us.aliyuncs.com。若仍失败，请在百炼控制台检查 Key 是否有效。`
+      )
+    }
     const errMsg =
       json?.error?.message ||
       json?.message ||
