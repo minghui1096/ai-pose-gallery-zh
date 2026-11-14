@@ -145,7 +145,9 @@ function SettingsPage() {
           hint={
             pid === 'comfyui'
               ? `本地运行本站时填 /comfy（同源代理，无需改跨域设置）；直连时 ComfyUI 需加启动参数 --enable-cors-header "${typeof window !== 'undefined' ? window.location.origin : '*'}"。Desktop 版默认端口 8000，便携版 8188`
-              : undefined
+              : pid === 'qwen'
+                ? '地址须与创建 API Key 的地域一致：北京 https://dashscope.aliyuncs.com；新加坡 https://dashscope-intl.aliyuncs.com；美国 https://dashscope-us.aliyuncs.com。'
+                : undefined
           }
         >
           <Input
@@ -156,7 +158,10 @@ function SettingsPage() {
           />
         </Field>
 
-        <Field label={pid === 'comfyui' ? 'API Key（可选，本地留空）' : 'API Key'}>
+        <Field
+          label={pid === 'comfyui' ? 'API Key（可选，本地留空）' : 'API Key'}
+          hint={pid === 'qwen' ? '填写阿里云百炼控制台创建的完整 API Key，不要附加 Bearer；阿里云 AccessKey ID / Secret 不能用于此接口。' : undefined}
+        >
           <div className="relative">
             <Input
               type={showKey ? 'text' : 'password'}
