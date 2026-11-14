@@ -18,6 +18,8 @@ export interface ProxyEnv {
  */
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://dashscope.aliyuncs.com', // 阿里云百炼 / Qwen
+  'https://dashscope-intl.aliyuncs.com', // 百炼新加坡
+  'https://dashscope-us.aliyuncs.com', // 百炼美国
   'https://ark.cn-beijing.volces.com', // 火山方舟 / Doubao
   'https://generativelanguage.googleapis.com', // Google Gemini
   'https://api.openai.com', // OpenAI
